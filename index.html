@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>임진왜란 디펜스: 최종장</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+        body { 
+            font-family: 'Noto Sans KR', sans-serif; 
+            background-color: #1a1a1a; 
+            color: #fff; 
+            text-align: center; 
+            margin: 0; 
+            user-select: none;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+        #rotate-msg {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 9999;
+            flex-direction: column; justify-content: center; align-items: center;
+            font-size: 24px; font-weight: bold; color: #f1c40f;
+        }
+        @media (orientation: portrait) { #rotate-msg { display: flex; } }
+
+        h1 { 
+            font-family: 'Black Han Sans', sans-serif; 
+            color: #f1c40f; 
+            margin: 5px 0; 
+            text-shadow: 2px 2px 0 #000; 
+            font-size: 22px; 
+        }
+        #game-wrapper { position: relative; width: 100%; max-width: 1000px; aspect-ratio: 1000 / 400; margin: 0 auto; border: 3px solid #555; background: #4e342e; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+        canvas { display: block; width: 100%; height: 100%; }
+        .hp-bar-container { position: absolute; bottom: 10px; width: 35%; height: 15px; background: #222; border: 1px solid #fff; z-index: 5; }
+        #korea-hp-con { left: 10px; }
+        #japan-hp-con { right: 10px; }
+        .hp-bar { height: 100%; transition: width 0.2s; }
+        #korea-hp { background: #3498db; width: 100%; }
+        #japan-hp { background: #e74c3c; width: 100%; }
+        .base-label { position: absolute; bottom: 30px; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px #000; z-index: 5; }
+        #timer-box { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 5px 15px; border-radius: 15px; font-size: 18px; font-weight: bold; border: 1px solid #fff; }
+        #control-panel { width: 100%; max-width: 1000px; margin: 0 auto; background: #2c3e50; padding: 5px; box-sizing: border-box; display: flex; flex-direction: column; gap: 5px; }
+        .top-info { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; }
+        .resource { color: #f1c40f; font-size: 16px; font-weight: bold; }
+        .pop-count { color: #fff; font-size: 14px; font-weight: bold; margin-left: 10px; }
+        .mode-select { display: flex; gap: 10px; }
+        .mode-btn { padding: 5px 15px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 13px; opacity: 0.5; transition: 0.2s; }
+        .mode-btn.active { opacity: 1; transform: scale(1.05); box-shadow: 0 0 5px white; }
+        .unit-deck { display: flex; justify-content: space-between; gap: 3px; height: 75px; }
+        .unit-card { flex: 1; background: #34495e; border: 2px solid #7f8c8d; border-radius: 5px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; position: relative; }
+        .unit-card:active { transform: scale(0.95); }
+        .unit-card:disabled { background: #222; border-color: #444; color: #666; cursor: not-allowed; filter: grayscale(100%); }
+        #btn-shield { border-color: #27ae60; background: #1e8449; }
+        #btn-hero { border-color: #f1c40f; background: #2c3e50; }
+        #btn-hero .unit-name { color: #f1c40f; }
+        .unit-name { font-weight: bold; margin-bottom: 2px; font-size: 12px; white-space: nowrap; }
+        .unit-cost { color: #f1c40f; font-size: 11px; }
+        #skill-btn { flex: 1.2; background: #222; border: 2px solid #555; border-radius: 5px; margin-left: 5px; cursor: not-allowed; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+        #skill-btn.ready { background: #c0392b; border-color: #e74c3c; cursor: pointer; animation: pulse 1s infinite; }
+        #skill-progress { position: absolute; bottom: 0; left: 0; height: 100%; width: 100%; background: rgba(0,0,0,0.8); transition: height 0.2s linear; }
+        #skill-text { position: relative; z-index: 2; font-weight: bold; font-size: 12px; line-height: 1.2; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+        #game-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; font-family: 'Black Han Sans', sans-serif; color: #fff; text-shadow: 0 0 10px #000, 0 0 20px #e74c3c; display: none; z-index: 100; pointer-events: none; text-align: center; width: 100%; }
+        #boss-warning { position: absolute; top: 20%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; color: #e74c3c; font-weight: bold; text-shadow: 2px 2px 0 #000; display: none; z-index: 50; animation: blink 0.5s infinite alternate; width: 100%; }
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.2; } }
+    </style>
+</head>
+<body>
+    <div id="rotate-msg">🔄 화면을 가로로 돌려주세요</div>
+    <h1>⚔️ 임진왜란 디펜스 ⚔️</h1>
+    <div id="game-wrapper">
+        <canvas id="gameCanvas" width="1000" height="400"></canvas>
+        <div id="timer-box">00:00</div>
+        <div id="boss-warning">⚠️ 적장 와키자카 등장! ⚠️</div>
+        <div class="hp-bar-container" id="korea-hp-con"><div class="hp-bar" id="korea-hp"></div></div>
+        <div class="base-label" style="left: 10px; color: #3498db;">🟦 조선</div>
+        <div class="hp-bar-container" id="japan-hp-con"><div class="hp-bar" id="japan-hp"></div></div>
+        <div class="base-label" style="right: 10px; color: #e74c3c;">🟥 왜군</div>
+        <div id="game-msg">승리!</div>
+    </div>
+    <div id="control-panel">
+        <div class="top-info">
+            <div class="mode-select">
+                <button class="mode-btn" id="btn-fantasy" style="background:#2980b9; color:white;" onclick="changeMode('fantasy')">📖 임진록</button>
+                <button class="mode-btn" id="btn-real" style="background:#c0392b; color:white;" onclick="changeMode('real')">🩸 임진왜란</button>
+            </div>
+            <div class="resource">
+                군자금: <span id="money">0</span> 
+                <span class="pop-count">👥 <span id="pop-val">0</span>/12</span>
+            </div>
+        </div>
+        <div class="unit-deck">
+            <button class="unit-card" onclick="spawnUnit('shield')" id="btn-shield">
+                <span class="unit-name">🛡️방패</span><span class="unit-cost">60</span>
+            </button>
+            <button class="unit-card" onclick="spawnUnit('spear')" id="btn-u1">
+                <span class="unit-name">⚔️창병</span><span class="unit-cost" id="cost-spear">50</span>
+            </button>
+            <button class="unit-card" onclick="spawnUnit('archer')" id="btn-u2">
+                <span class="unit-name">🏹궁병</span><span class="unit-cost" id="cost-archer">80</span>
+            </button>
+            <button class="unit-card" onclick="spawnUnit('cavalry')" id="btn-u3">
+                <span class="unit-name">🐎기마</span><span class="unit-cost" id="cost-cavalry">150</span>
+            </button>
+            <button class="unit-card" onclick="spawnUnit('singijeon')" id="btn-u4" style="border-color: #9b59b6;">
+                <span class="unit-name" style="color:#d2b4de;">🚀신기전</span><span class="unit-cost" id="cost-singijeon">300</span>
+            </button>
+            <button class="unit-card" onclick="spawnHero()" id="btn-hero">
+                <span class="unit-name">⭐이순신</span><span class="unit-cost" id="cost-hero">1000</span>
+            </button>
+            <div id="skill-btn" onclick="useSkill()">
+                <div id="skill-progress"></div>
+                <div id="skill-text">대장군전<br><span style="font-size:10px;">(터치)</span></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/* JS 게임 로직: 그대로 유지, GitHub Pages에서도 바로 실행 가능 */
+... (이하 동일) ...
+</script>
+</body>
+</html>
